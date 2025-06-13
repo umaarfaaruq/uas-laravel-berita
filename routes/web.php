@@ -7,6 +7,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\UserDashboardController; // Pastikan ini diimpor
 
 /*
 |--------------------------------------------------------------------------
@@ -24,30 +25,33 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Admin Panel Routes
+// Admin, Editor, Wartawan Panel Routes
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
 
+    // Route untuk dashboard utama (yang sebelumnya /dashboard, sekarang di bawah /admin/dashboard)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Profile routes from Breeze, adjusted for the admin panel
+    // Rute profil dari Breeze
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Password update route
+    // Rute update password
     Route::put('/password', [PasswordController::class, 'update'])->name('password.update');
 
-    // Category Management (Admin only)
+    // Manajemen Kategori (Hanya Admin)
     Route::middleware('role:Admin')->group(function () {
         Route::resource('categories', CategoryController::class);
     });
 
-    // News Management (Admin, Editor, Wartawan)
+    // Manajemen Berita (Admin, Editor, Wartawan)
+    // Pastikan NewsController memiliki logika hasAnyRole untuk memfilter berita berdasarkan user_id
+    // jika yang login bukan Admin/Editor.
     Route::middleware('role:Admin|Editor|Wartawan')->group(function () {
         Route::resource('news', NewsController::class);
     });
 
-    // Approval Management (Admin & Editor)
+    // Manajemen Persetujuan Berita (Admin & Editor)
     Route::middleware('role:Admin|Editor')->group(function () {
         Route::post('news/{news}/approve', [ApprovalController::class, 'approve'])->name('news.approve');
         Route::post('news/{news}/reject', [ApprovalController::class, 'reject'])->name('news.reject');
@@ -55,4 +59,11 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
 
 });
 
-require __DIR__.'/auth.php';
+// Dashboard Khusus untuk Peran 'User' Biasa
+// Pastikan user sudah terautentikasi, terverifikasi email, dan memiliki peran 'User'
+Route::middleware(['auth', 'verified', 'role:User'])->prefix('user')->name('user.')->group(function () {
+    Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
+});
+
+
+require __DIR__.'/auth.php'; // Mengimpor rute autentikasi Laravel Breeze
